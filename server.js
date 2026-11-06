@@ -7,7 +7,9 @@ const authRoutes = require('./routes/authRoutes');
 const customerRoutes = require('./routes/customerRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
+const apiKeyRoutes = require('./routes/apiKeyRoutes');
 const WebhookEvent = require('./models/WebhookEvent');
+const ApiKey = require('./models/ApiKey');
 
 const app = express();
 
@@ -22,6 +24,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/keys', apiKeyRoutes);
 
 const PORT = process.env.PORT || 5000;
 
@@ -30,7 +33,7 @@ async function connectDB() {
     throw new Error('MONGO_URI environment variable is not defined');
   }
   await mongoose.connect(process.env.MONGO_URI);
-  await WebhookEvent.init();
+  await Promise.all([WebhookEvent.init(), ApiKey.init()]);
 }
 
 if (require.main === module) {

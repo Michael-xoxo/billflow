@@ -7,15 +7,21 @@ const {
   updateCustomer,
   deleteCustomer
 } = require('../controllers/customerController');
-const { authMiddleware } = require('../utils/authMiddleware');
+const { authGuard } = require('../middleware/authGuard');
+const rateLimiter = require('../middleware/rateLimiter');
+const requireScope = require('../middleware/requireScope');
 
-router.use(authMiddleware);
+router.use(authGuard, rateLimiter);
 
-router.route('/').post(createCustomer).get(getCustomers);
+router
+  .route('/')
+  .get(requireScope('customers:read'), getCustomers)
+  .post(requireScope('customers:write'), createCustomer);
+
 router
   .route('/:id')
-  .get(getCustomerById)
-  .put(updateCustomer)
-  .delete(deleteCustomer);
+  .get(requireScope('customers:read'), getCustomerById)
+  .put(requireScope('customers:write'), updateCustomer)
+  .delete(requireScope('customers:write'), deleteCustomer);
 
 module.exports = router;

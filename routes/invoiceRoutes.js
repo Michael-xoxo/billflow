@@ -6,12 +6,22 @@ const {
   getInvoiceById,
   updateInvoiceStatus
 } = require('../controllers/invoiceController');
-const { authMiddleware } = require('../utils/authMiddleware');
+const { authGuard } = require('../middleware/authGuard');
+const rateLimiter = require('../middleware/rateLimiter');
+const requireScope = require('../middleware/requireScope');
 
-router.use(authMiddleware);
+router.use(authGuard, rateLimiter);
 
-router.route('/').post(createInvoice).get(getInvoices);
-router.route('/:id').get(getInvoiceById).put(updateInvoiceStatus);
-router.patch('/:id/status', updateInvoiceStatus);
+router
+  .route('/')
+  .get(requireScope('invoices:read'), getInvoices)
+  .post(requireScope('invoices:write'), createInvoice);
+
+router
+  .route('/:id')
+  .get(requireScope('invoices:read'), getInvoiceById)
+  .put(requireScope('invoices:write'), updateInvoiceStatus);
+
+router.patch('/:id/status', requireScope('invoices:write'), updateInvoiceStatus);
 
 module.exports = router;

@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const { generateToken } = require('../utils/authMiddleware');
+const { generateToken } = require('../middleware/authGuard');
 
 async function register(req, res) {
   try {
