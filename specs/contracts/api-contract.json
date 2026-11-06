@@ -1,0 +1,40 @@
+{
+  "Customer": {
+    "_id": "ObjectId",
+    "user": "ObjectId (ref: User)",
+    "name": "String",
+    "email": "String",
+    "company": "String",
+    "createdAt": "ISOString"
+  },
+  "Invoice": {
+    "_id": "ObjectId",
+    "user": "ObjectId (ref: User)",
+    "customer": "ObjectId (ref: Customer)",
+    "invoiceNumber": "String (e.g. INV-2026-001)",
+    "status": "Enum ['draft', 'pending', 'paid', 'void']",
+    "currency": "String (e.g. 'usd')",
+    "lineItems": [
+      {
+        "description": "String",
+        "quantity": "Number (integer)",
+        "unitPriceCents": "Number (integer)",
+        "totalCents": "Number (integer)"
+      }
+    ],
+    "subtotalCents": "Number (integer)",
+    "taxPercent": "Number",
+    "taxCents": "Number (integer)",
+    "totalCents": "Number (integer)",
+    "dueDate": "ISOString",
+    "paidAt": "ISOString | null"
+  },
+  "WebhookEvent": {
+    "_id": "ObjectId",
+    "eventId": "String (unique)",
+    "eventType": "String (e.g. 'invoice.payment_succeeded')",
+    "status": "Enum ['processed', 'failed']",
+    "payload": "Object",
+    "processedAt": "ISOString"
+  }
+}
