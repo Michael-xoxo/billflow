@@ -22,3 +22,19 @@ RULE 7 — SESSION LESSONS LOG
 At session wrap-up, append to session-notes.md:
 - One architectural decision made
 - One friction point / bug encountered
+
+---
+
+## SUB-AGENT EXECUTION TOPOLOGY
+
+### Agent Alpha: Backend Core
+- **Domain**: `/models`, `/controllers`, `/routes`, `/middleware`, `/services`, `/utils`, `/scripts`, `server.js`
+- **Responsibilities**: Mongoose schemas, zero-float integer cents math engine, dual-auth (`JWT` + `sec_live_` SHA-256 API keys), fixed-window rate limiting, idempotent webhook ledger, streaming PDF generation, and MongoDB analytics aggregation pipelines.
+
+### Agent Beta: Frontend UI
+- **Domain**: `/client`
+- **Responsibilities**: Vite React financial cockpit, `AuthContext` session state, `AnalyticsCards` metric presentation, `InvoiceManager` integer-cent ingestion & PDF streaming trigger, and `WebhookSimulator` interactive idempotency testing widget.
+
+### Agent Gamma: QA/Security Automator
+- **Domain**: Read-only codebase audit & adversarial verification runners
+- **Responsibilities**: Boundary rounding assertions, float-injection rejection tests, duplicate webhook replay verification (`E11000` & ledger checks), API key scope/rate-limit burst testing, tenant isolation verification, and production static/API routing validation.

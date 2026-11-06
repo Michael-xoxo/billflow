@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -27,6 +28,18 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/keys', apiKeyRoutes);
 app.use('/api/analytics', analyticsRoutes);
+
+if (process.env.NODE_ENV === 'production') {
+  const clientDistPath = path.join(__dirname, 'client/dist');
+  app.use(express.static(clientDistPath));
+
+  app.get('/{*splat}', (req, res) => {
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ message: 'API endpoint not found' });
+    }
+    return res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
 
 const PORT = process.env.PORT || 5000;
 

@@ -14,3 +14,8 @@
 
 - **Architectural Decision Made**: Isolated all dollar-to-cents input conversion and cents-to-currency string presentation in `client/src/utils/currency.js` (`dollarsToIntegerCents`, `formatCents`, `computeInvoicePreview`), ensuring `InvoiceManager.jsx` submits strictly whole integer cents (`unitPriceCents`) to `POST /api/invoices` while `WebhookSimulator.jsx` retains the selected invoice and `eventId` across dispatches so operators can immediately test duplicate event idempotency (`Processed (Paid)` vs `Ignored (Duplicate Event)`).
 - **Friction Point / Bug Encountered**: Because `GET /api/invoices/:id/pdf` is protected by `authGuard` expecting an `Authorization: Bearer <token>` header, a plain `<a href target="_blank">` browser navigation would omit the JWT header and fail with HTTP 401; resolved by fetching the PDF stream via `authFetch`, materializing a `Blob` (`application/pdf`), and opening `URL.createObjectURL(blob)` in a new tab.
+
+## Task 3.5 — Production Hardening, Database Seeding & Autonomous Sub-Agent Rules
+
+- **Architectural Decision Made**: Mounted Express static asset serving (`express.static(path.join(__dirname, 'client/dist'))`) and the Express 5 wildcard SPA fallback (`app.get('/{*splat}', ...)`) strictly after all `/api/*` routers in `server.js` with an explicit `/api/` 404 guard, ensuring SPA client-side navigation works under `NODE_ENV=production` without ever shadowing API routes.
+- **Friction Point / Bug Encountered**: Express 5 (`^5.3.0`) uses `path-to-regexp` v8 syntax where bare `app.get('*', ...)` throws a `PathError` at boot; using the named splat parameter `app.get('/{*splat}', ...)` satisfies Express 5 route parsing cleanly.
