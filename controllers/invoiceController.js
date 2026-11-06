@@ -4,6 +4,7 @@ const {
   calculateLineTotal,
   calculateInvoiceTotals
 } = require('../utils/financialMath');
+const { streamInvoicePDF } = require('../services/pdfService');
 
 async function createInvoice(req, res) {
   try {
@@ -15,7 +16,8 @@ async function createInvoice(req, res) {
       currency,
       lineItems,
       taxPercent = 0,
-      dueDate
+      dueDate,
+      paidAt
     } = req.body;
 
     const resolvedCustomerId = customer || customerId;
@@ -64,6 +66,11 @@ async function createInvoice(req, res) {
     }
     if (dueDate) {
       invoiceData.dueDate = dueDate;
+    }
+    if (paidAt) {
+      invoiceData.paidAt = new Date(paidAt);
+    } else if (invoiceData.status === 'paid') {
+      invoiceData.paidAt = new Date();
     }
 
     const invoice = await Invoice.create(invoiceData);
@@ -126,9 +133,30 @@ async function updateInvoiceStatus(req, res) {
   }
 }
 
+async function downloadInvoicePDF(req, res) {
+  try {
+    const invoice = await Invoice.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    })
+      .populate('customer', 'name email company')
+      .populate('user', 'name email');
+
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+
+    res.status(200);
+    return streamInvoicePDF(invoice, res);
+  } catch (error) {
+    return res.status(400).json({ message: error.message });
+  }
+}
+
 module.exports = {
   createInvoice,
   getInvoices,
   getInvoiceById,
-  updateInvoiceStatus
+  updateInvoiceStatus,
+  downloadInvoicePDF
 };

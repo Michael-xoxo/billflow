@@ -4,7 +4,8 @@ const {
   createInvoice,
   getInvoices,
   getInvoiceById,
-  updateInvoiceStatus
+  updateInvoiceStatus,
+  downloadInvoicePDF
 } = require('../controllers/invoiceController');
 const { authGuard } = require('../middleware/authGuard');
 const rateLimiter = require('../middleware/rateLimiter');
@@ -16,6 +17,8 @@ router
   .route('/')
   .get(requireScope('invoices:read'), getInvoices)
   .post(requireScope('invoices:write'), createInvoice);
+
+router.get('/:id/pdf', requireScope('invoices:read'), downloadInvoicePDF);
 
 router
   .route('/:id')

@@ -8,6 +8,7 @@ const customerRoutes = require('./routes/customerRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const apiKeyRoutes = require('./routes/apiKeyRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
 const WebhookEvent = require('./models/WebhookEvent');
 const ApiKey = require('./models/ApiKey');
 
@@ -25,6 +26,7 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/keys', apiKeyRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 const PORT = process.env.PORT || 5000;
 
