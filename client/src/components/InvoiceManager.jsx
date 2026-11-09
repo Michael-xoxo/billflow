@@ -9,9 +9,19 @@ import {
 export default function InvoiceManager({
   invoices = [],
   customers = [],
-  onDataMutated
+  onDataMutated,
+  refreshMetrics
 }) {
   const { authFetch } = useAuth();
+
+  const [localInvoices, setLocalInvoices] = useState(invoices);
+  const [voidError, setVoidError] = useState('');
+  const [voidSuccess, setVoidSuccess] = useState('');
+  const [voidingId, setVoidingId] = useState(null);
+
+  useEffect(() => {
+    setLocalInvoices(invoices);
+  }, [invoices]);
 
   // Inline Customer Creation State
   const [customerName, setCustomerName] = useState('');
@@ -166,6 +176,54 @@ export default function InvoiceManager({
       }
     },
     [authFetch]
+  );
+
+  const handleVoidInvoice = useCallback(
+    async (invoice) => {
+      setVoidError('');
+      setVoidSuccess('');
+
+      const confirmed = window.confirm(
+        'Are you sure you want to void this invoice? This cannot be undone.'
+      );
+      if (!confirmed) {
+        return;
+      }
+
+      setVoidingId(invoice._id);
+      try {
+        const res = await authFetch(`/api/invoices/${invoice._id}/void`, {
+          method: 'PATCH'
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(
+            data.error || data.message || `Failed to void invoice (HTTP ${res.status})`
+          );
+        }
+
+        setLocalInvoices((prev) =>
+          prev.map((inv) =>
+            inv._id === invoice._id
+              ? { ...inv, ...data, status: 'void', customer: inv.customer || data.customer }
+              : inv
+          )
+        );
+        setVoidSuccess(`Invoice ${invoice.invoiceNumber} has been voided.`);
+
+        if (onDataMutated) {
+          await onDataMutated();
+        }
+        if (refreshMetrics) {
+          await refreshMetrics();
+        }
+      } catch (err) {
+        setVoidError(err.message || 'Failed to void invoice');
+      } finally {
+        setVoidingId(null);
+      }
+    },
+    [authFetch, onDataMutated, refreshMetrics]
   );
 
   return (
@@ -370,7 +428,17 @@ export default function InvoiceManager({
 
       {/* Right Column: Invoices Table */}
       <section className="panel invoice-table-panel" aria-label="Invoice Ledger">
-        <h3>Issued Invoices ({invoices.length})</h3>
+        <h3>Issued Invoices ({localInvoices.length})</h3>
+        {voidError && (
+          <div className="alert alert-error" role="alert" data-testid="void-error-banner">
+            {voidError}
+          </div>
+        )}
+        {voidSuccess && (
+          <div className="alert alert-success" role="status" data-testid="void-success-banner">
+            {voidSuccess}
+          </div>
+        )}
         {pdfDownloadStatus && (
           <div className="alert alert-info" data-testid="pdf-download-status">
             {pdfDownloadStatus}
@@ -385,18 +453,18 @@ export default function InvoiceManager({
                 <th>Customer</th>
                 <th>Status</th>
                 <th>Total</th>
-                <th>PDF</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {invoices.length === 0 ? (
+              {localInvoices.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="empty-cell">
                     No invoices found. Create your first invoice on the left.
                   </td>
                 </tr>
               ) : (
-                invoices.map((inv) => (
+                localInvoices.map((inv) => (
                   <tr key={inv._id} data-testid={`invoice-row-${inv.invoiceNumber}`}>
                     <td className="mono">{inv.invoiceNumber}</td>
                     <td>{inv.customer?.name || 'Customer'}</td>
@@ -412,14 +480,27 @@ export default function InvoiceManager({
                       {formatCents(inv.totalCents)}
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => handleDownloadPdf(inv)}
-                        data-testid={`download-pdf-${inv.invoiceNumber}`}
-                      >
-                        Download PDF
-                      </button>
+                      <div className="input-with-btn">
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleDownloadPdf(inv)}
+                          data-testid={`download-pdf-${inv.invoiceNumber}`}
+                        >
+                          Download PDF
+                        </button>
+                        {(inv.status === 'pending' || inv.status === 'draft') && (
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleVoidInvoice(inv)}
+                            disabled={voidingId === inv._id}
+                            data-testid={`void-invoice-${inv.invoiceNumber}`}
+                          >
+                            {voidingId === inv._id ? 'Voiding...' : 'Void'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

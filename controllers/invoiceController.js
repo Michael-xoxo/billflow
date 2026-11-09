@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Invoice = require('../models/Invoice');
 const Customer = require('../models/Customer');
 const {
@@ -124,12 +125,81 @@ async function updateInvoiceStatus(req, res) {
       if (status === 'paid' && !invoice.paidAt) {
         invoice.paidAt = new Date();
       }
+      if (status === 'void' && !invoice.voidedAt) {
+        invoice.voidedAt = new Date();
+      }
     }
 
     await invoice.save();
     return res.status(200).json(invoice);
   } catch (error) {
     return res.status(400).json({ message: error.message });
+  }
+}
+
+async function voidInvoice(req, res) {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({
+        error: 'Invoice not found',
+        message: 'Invoice not found'
+      });
+    }
+
+    const updatedInvoice = await Invoice.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        user: req.user._id,
+        status: { $in: ['draft', 'pending'] }
+      },
+      {
+        $set: {
+          status: 'void',
+          voidedAt: new Date()
+        }
+      },
+      { returnDocument: 'after' }
+    ).populate('customer', 'name email company');
+
+    if (updatedInvoice) {
+      return res.status(200).json(updatedInvoice);
+    }
+
+    const existingInvoice = await Invoice.findOne({
+      _id: req.params.id,
+      user: req.user._id
+    }).populate('customer', 'name email company');
+
+    if (!existingInvoice) {
+      return res.status(404).json({
+        error: 'Invoice not found',
+        message: 'Invoice not found'
+      });
+    }
+
+    if (existingInvoice.status === 'paid') {
+      return res.status(400).json({
+        error: 'Cannot void an invoice that is already paid',
+        message: 'Cannot void an invoice that is already paid'
+      });
+    }
+
+    if (existingInvoice.status === 'void') {
+      return res.status(400).json({
+        error: 'Invoice is already voided',
+        message: 'Invoice is already voided'
+      });
+    }
+
+    return res.status(400).json({
+      error: `Cannot void invoice with status ${existingInvoice.status}`,
+      message: `Cannot void invoice with status ${existingInvoice.status}`
+    });
+  } catch (error) {
+    return res.status(400).json({
+      error: error.message,
+      message: error.message
+    });
   }
 }
 
@@ -158,5 +228,6 @@ module.exports = {
   getInvoices,
   getInvoiceById,
   updateInvoiceStatus,
+  voidInvoice,
   downloadInvoicePDF
 };

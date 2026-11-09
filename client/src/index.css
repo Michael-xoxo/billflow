@@ -396,6 +396,11 @@ select {
   color: #cbd5e1;
 }
 
+.status-void {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+
 .input-with-btn {
   display: flex;
   gap: 0.4rem;

@@ -9,7 +9,8 @@ async function getAnalyticsSummary(req, res) {
     const results = await Invoice.aggregate([
       {
         $match: {
-          user: userObjectId
+          user: userObjectId,
+          status: { $ne: 'void' }
         }
       },
       {

@@ -5,6 +5,7 @@ const {
   getInvoices,
   getInvoiceById,
   updateInvoiceStatus,
+  voidInvoice,
   downloadInvoicePDF
 } = require('../controllers/invoiceController');
 const { authGuard } = require('../middleware/authGuard');
@@ -26,5 +27,6 @@ router
   .put(requireScope('invoices:write'), updateInvoiceStatus);
 
 router.patch('/:id/status', requireScope('invoices:write'), updateInvoiceStatus);
+router.patch('/:id/void', authGuard, requireScope('invoices:write'), voidInvoice);
 
 module.exports = router;

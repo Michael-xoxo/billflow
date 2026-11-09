@@ -19,3 +19,18 @@
 
 - **Architectural Decision Made**: Mounted Express static asset serving (`express.static(path.join(__dirname, 'client/dist'))`) and the Express 5 wildcard SPA fallback (`app.get('/{*splat}', ...)`) strictly after all `/api/*` routers in `server.js` with an explicit `/api/` 404 guard, ensuring SPA client-side navigation works under `NODE_ENV=production` without ever shadowing API routes.
 - **Friction Point / Bug Encountered**: Express 5 (`^5.3.0`) uses `path-to-regexp` v8 syntax where bare `app.get('*', ...)` throws a `PathError` at boot; using the named splat parameter `app.get('/{*splat}', ...)` satisfies Express 5 route parsing cleanly.
+
+## Task 3.6 — Invoice Void & Cancellation Engine (Agent Alpha — Backend Core)
+
+- **Architectural Decision Made**: Implemented `voidInvoice` (`PATCH /api/invoices/:id/void`) using an atomic conditional `Invoice.findOneAndUpdate({ _id, user: req.user._id, status: { $in: ['draft', 'pending'] } }, { $set: { status: 'void', voidedAt: new Date() } }, { returnDocument: 'after' })` before falling back to a diagnostic `findOne` lookup to distinguish `404` (missing/cross-tenant), `400` (`status === 'paid'`), and `400` (`status === 'void'`), guaranteeing race-condition-free state transitions under concurrent void bursts and excluding `status: 'void'` at the `$match` stage of `getAnalyticsSummary`.
+- **Friction Point / Bug Encountered**: `models/Invoice.js` originally lacked a `voidedAt` field in `invoiceSchema`, which would cause Mongoose strict schema mode to silently strip `voidedAt` during persistence; resolved after Rule 3 Red Zone clearance by explicitly adding `voidedAt: { type: Date, default: null }` to `invoiceSchema`.
+
+## Task 3.6 — Invoice Void & Cancellation Engine (Agent Beta — Frontend UI)
+
+- **Architectural Decision Made**: Synchronized `InvoiceManager.jsx` with a local `localInvoices` state mirror of the `invoices` prop so that confirming `window.confirm("Are you sure you want to void this invoice? This cannot be undone.")` and receiving HTTP 200 from `PATCH /api/invoices/:id/void` immediately updates the row's status to `'void'` (hiding the "Void" button) while invoking `onDataMutated()` / `refreshMetrics()` to re-fetch workspace data and refresh `AnalyticsCards`.
+- **Friction Point / Bug Encountered**: `PATCH /api/invoices/:id/void` returns an updated invoice whose `customer` field may be populated or an ID depending on backend path, so merging `{ ...inv, ...data, status: 'void', customer: inv.customer || data.customer }` preserves existing customer display metadata immediately before the full workspace refresh completes.
+
+## Task 3.6 — Invoice Void & Cancellation Engine (Agent Gamma — QA/Security Automator)
+
+- **Architectural Decision Made**: Built `tests/adversarial-void-engine.test.js` as a self-contained runner that boots an ephemeral HTTP server (`server.listen(0)`), provisions isolated test tenants (`Tenant A` and `Tenant B`) via `POST /api/auth/register`, and executes live HTTP assertions for `paid` immutability (`400`), exact `20000`-cent `outstandingCents` reconciliation on `GET /api/analytics/summary`, cross-tenant `404` isolation, and a 5-way `Promise.all` concurrent void burst before cleaning up all test artifacts in `finally`.
+- **Friction Point / Bug Encountered**: Under a 5-way concurrent `PATCH /api/invoices/:id/void` burst, a naive read-then-save pattern would allow multiple requests to read `status === 'pending'` simultaneously; verifying `successResponses.length === 1` and `alreadyVoidedResponses.length === 4` proved that the atomic conditional `findOneAndUpdate({ status: { $in: ['draft', 'pending'] } })` eliminates race conditions and unhandled rejections.

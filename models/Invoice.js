@@ -114,6 +114,10 @@ const invoiceSchema = new mongoose.Schema(
     paidAt: {
       type: Date,
       default: null
+    },
+    voidedAt: {
+      type: Date,
+      default: null
     }
   },
   {
